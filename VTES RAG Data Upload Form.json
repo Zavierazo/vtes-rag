@@ -446,7 +446,7 @@
       "name": "Insert Document Metadata",
       "type": "n8n-nodes-base.postgres",
       "position": [
-        976,
+        1408,
         1120
       ],
       "executeOnce": true,
@@ -653,7 +653,7 @@
       "name": "Delete Old Doc Records",
       "type": "n8n-nodes-base.postgres",
       "position": [
-        608,
+        1040,
         1120
       ],
       "typeVersion": 2.5,
@@ -676,7 +676,7 @@
       "name": "Delete Old Data Records",
       "type": "n8n-nodes-base.postgres",
       "position": [
-        800,
+        1232,
         1120
       ],
       "typeVersion": 2.5,
@@ -808,7 +808,7 @@
                 "conditions": [
                   {
                     "leftValue": "={{ $('File Hash').item.json.file_hash }}",
-                    "rightValue": "={{ $json.hash }}",
+                    "rightValue": "={{ $('Select Document').item.json.hash }}",
                     "operator": {
                       "type": "string",
                       "operation": "notEquals"
@@ -823,9 +823,7 @@
             }
           ]
         },
-        "options": {
-          "fallbackOutput": "none"
-        }
+        "options": {}
       },
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
@@ -852,7 +850,11 @@
       "alwaysOutputData": false
     },
     {
-      "parameters": {},
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
@@ -861,6 +863,27 @@
       ],
       "id": "6b64d24a-425e-45cc-857e-89e9146738e0",
       "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "CREATE EXTENSION IF NOT EXISTS vector;",
+        "options": {}
+      },
+      "id": "36ce2615-43d4-4198-a1a6-5ab911bcf019",
+      "name": "Add Vector Extension",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        784,
+        656
+      ],
+      "typeVersion": 2.5,
+      "credentials": {
+        "postgres": {
+          "id": "S7hJ3qjwHQgKrfRj",
+          "name": "Postgres account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1129,7 +1152,13 @@
     },
     "Create Document Rows Table (for Tabular Data)": {
       "main": [
-        []
+        [
+          {
+            "node": "Add Vector Extension",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Switch File Hash": {
@@ -1171,11 +1200,14 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "58f87c67-1cb3-4dc1-b6a9-3e813e23df35",
+  "versionId": "f0b8c38e-22ec-4164-8dd5-2abfcf063fd1",
   "meta": {
     "templateId": "10157",
     "templateCredsSetupCompleted": true,

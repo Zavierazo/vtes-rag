@@ -1,0 +1,151 @@
+{
+  "name": "Vtes Chat Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "6f0357b5-7c1f-4597-9794-57e59e82164b",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "6982fcae-65f8-4c72-ad1a-553a76917909",
+      "name": "Webhook",
+      "webhookId": "6f0357b5-7c1f-4597-9794-57e59e82164b"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an AI assistant specialized in Vampire: The Eternal Struggle (VTES). You must answer only questions related to VTES. All responses must use Markdown.\n\nInstructions:\n\n* Use the provided tools whenever needed to answer the user’s question.\n* Always include the source of your answer at the end.\n* If the source is the rulebook, include the link: [Rulebook](https://www.blackchantry.com/utilities/rulebook/\n* If you do not know the answer, respond with: \"I don't know.\"\n* If the question is about a card and the tools cannot find that card, clearly say that the card was not found.\n* If the card has rulings, list all rulings at the end with their links.\n* If the card has no rulings, write: \"No ruling found.\"\n* If the question is about a specific card and you know its ID, include the card image at the end using this format: ![Card Image](https://cdn.vtesdecks.com/img/cards/$cardId.jpg) (replace $cardId with the actual ID)\n"
+            },
+            {
+              "content": "=History: \n{{ \n  $json.body.chatHistory.map(item => ({\n    role: item.type === 'HUMAN' ? 'user' : 'assistant',\n    content: item.content\n  })).map(item => item.role + ': '+ item.content).join('\\n')\n}}\nQuestion: {{ $json.body.question }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "parallelToolCalls": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "6275bfa1-ce79-4514-a3e7-535b56919782",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "fLsk4eYCFNxmTzGF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Make http request to find card id by name ordered by score of similarity",
+        "url": "http://api.vtesdecks.com/1.0/cards/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=query",
+              "value": "={{ $fromAI('name', ``, 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        160,
+        208
+      ],
+      "id": "c97f825e-03fa-44eb-be1b-7782b6837e2d",
+      "name": "Find Card by Name"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Makes an HTTP request and returns the ruling for specific card id",
+        "url": "=https://api.krcg.org/card/{{ $fromAi('card_id')}}",
+        "options": {},
+        "optimizeResponse": true,
+        "dataField": "rulings"
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        208
+      ],
+      "id": "843e778d-cf05-4304-a5c5-aa0d164678b5",
+      "name": "Card Ruling"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Card by Name": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Card Ruling": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9dd053ba-b502-4655-ba0d-d592e2ae2455",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "431473cc52e92c87843dd3b27b224fd53e56fad3afead2e8ff6b1228ffa06838"
+  },
+  "id": "LfGYsQ82vjjJoYLP",
+  "tags": []
+}

@@ -33,7 +33,9 @@
       "parameters": {
         "operation": "text",
         "binaryPropertyName": "={{$('Set File ID').last().binary.data}}",
-        "options": {}
+        "options": {
+          "encoding": "utf8"
+        }
       },
       "id": "a137d00b-fb01-408c-9963-645e2beb44d9",
       "name": "Extract Document Text",
@@ -43,7 +45,7 @@
         1344
       ],
       "typeVersion": 1,
-      "alwaysOutputData": true
+      "alwaysOutputData": false
     },
     {
       "parameters": {
@@ -162,7 +164,9 @@
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "application/pdf"
             },
             {
               "conditions": {
@@ -185,7 +189,9 @@
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "application/xlsx"
             },
             {
               "conditions": {
@@ -208,7 +214,9 @@
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "application/csv"
             },
             {
               "conditions": {
@@ -231,7 +239,34 @@
                   }
                 ],
                 "combinator": "and"
-              }
+              },
+              "renameOutput": true,
+              "outputKey": "application/txt"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "2a8fa4d0-e039-482b-a548-454c288aa821",
+                    "leftValue": "={{ $('Set File ID').item.json.file_type }}",
+                    "rightValue": "text/plain",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text/plain"
             }
           ]
         },
@@ -717,7 +752,7 @@
               "fieldLabel": "data",
               "fieldType": "file",
               "multipleFiles": false,
-              "acceptFileTypes": ".pdf",
+              "acceptFileTypes": ".pdf,.txt,.xlsx,.csv",
               "requiredField": true
             }
           ]
@@ -884,6 +919,35 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "binaryToPropery",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1792,
+        1040
+      ],
+      "id": "d3494919-0388-4771-aedc-38b2c26bd75a",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "binaryPropertyName": "={{$('Set File ID').last().binary.data}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        2272,
+        1536
+      ],
+      "id": "f8f0f3f1-278a-4f0b-a01e-bb9bdde27255",
+      "name": "Extract from Text File"
     }
   ],
   "pinData": {},
@@ -893,6 +957,11 @@
         [
           {
             "node": "Extract PDF Text",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract from File",
             "type": "main",
             "index": 0
           }
@@ -914,6 +983,13 @@
         [
           {
             "node": "Extract Document Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract from Text File",
             "type": "main",
             "index": 0
           }
@@ -1198,6 +1274,17 @@
           }
         ]
       ]
+    },
+    "Extract from Text File": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1207,7 +1294,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false
   },
-  "versionId": "f0b8c38e-22ec-4164-8dd5-2abfcf063fd1",
+  "versionId": "43d22f48-f26c-43bd-9f7d-cb4a0e456644",
   "meta": {
     "templateId": "10157",
     "templateCredsSetupCompleted": true,

@@ -1,0 +1,266 @@
+{
+  "name": "VTES Ebay Card Resolver",
+  "nodes": [
+    {
+      "parameters": {
+        "toolDescription": "Make http request to find card id by name ordered by score of similarity",
+        "url": "http://api.vtesdecks.com/1.0/cards/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=query",
+              "value": "={{ $fromAI('name', ``, 'string') }}"
+            },
+            {
+              "name": "limit",
+              "value": "3"
+            },
+            {
+              "name": "fields",
+              "value": "id,name,aka,group,adv"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        432,
+        432
+      ],
+      "id": "0576a911-c0d8-4f92-bca4-d5ac3d1e29d5",
+      "name": "Find Card by Name"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "fe117f49-ef85-4886-9edf-f75aec3a1e2c",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1024,
+        0
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9a9a245e-f1a1-4282-bb02-a81ffe629f0f",
+              "name": "chatInput",
+              "type": "string",
+              "value": "={{ $json?.chatInput || $json.body.chatInput }}"
+            },
+            {
+              "id": "b80831d8-c653-4203-8706-adedfdb98f77",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $json?.sessionId || $json.body.sessionId}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6e9c5c6d-2ed6-4b83-bfb6-502b75ba3d6c",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        224,
+        0
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "public": true,
+        "authentication": "n8nUserAuth",
+        "initialMessages": "Hello! Welcome to the Vampire: The Eternal Struggle (VTES) assistant. How can I help you with VTES today?",
+        "options": {}
+      },
+      "id": "7811e12c-f4ad-419b-a0ef-b4a540e5b397",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2df13543-2a58-42ac-9383-f2be37247634",
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "3018700c-5243-43e8-8a30-85fd4bad906d",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f59ea06e-6d52-410c-aba6-ed2f4651da5b",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        208
+      ],
+      "webhookId": "3018700c-5243-43e8-8a30-85fd4bad906d",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "##  VTES Product Analysis Agent System Prompt\n\n### 1.  Role and Goal\n\nYou are a **highly specialized AI Card Analyst** for the collectible card game *Vampire: The Eternal Struggle (VTES)*. Your sole **Goal** is to **identify all Crypt cards** (vampires and allies) listed in the product title and description input, find their unique Card ID, and return a JSON object detailing each card and its quantity.\n\n### 2. 🛠️ Tool Definition and Usage\n\nYou have access to the critical function: `tool_find_card_id(name: str, advanced: bool = False, group: Optional[Union[str, int]] = None) -> list[dict]`.\n\n* **`tool_find_card_id`:** Searches the VTES Crypt card database.\n    * **`name` (Required):** The name of the card (e.g., \"Anarch Convert\", \"Ur-Shulgi\").\n    * **`advanced` (Optional, default `False`):** Set to `True` if the card name is explicitly marked as \"Advanced\" or \"ADV\".\n    * **`group` (Optional, default `None`):** The group number (e.g., 2, 6) or identifier (e.g., \"Fifth Edition\", \"V5\").\n    * **Returns:** A list of possible card matches, each containing a unique `card_id` (string) and full card details.\n\n**Tool Usage Rule:** You **MUST** use `tool_find_card_id` for every unique Crypt card name identified in the input.\n\n### 3. 📜 Card Identification Logic\n\n1.  **Extraction:** Identify all potential Crypt card names in the title and description.\n2.  **Quantity:**\n    * Use any explicit quantity number (e.g., \"x3 Card Name\", \"Card Name (5)\").\n    * **Default:** If no quantity is specified, the quantity is **1**.\n3.  **Advanced Status:**\n    * If the terms **\"Advanced\"** or **\"ADV\"** appear near the card name, set the `advanced` parameter to `True`.\n    * Otherwise, set `advanced` to `False`.\n4.  **Grouping:**\n    * If the terms **\"Fifth Edition\"** or **\"V5\"** appear anywhere in the listing, treat this as **Group 6 or higher** (i.e., set `group=6` or the identifier accepted by the tool for the latest group).\n    * If a specific group number (e.g., \"G4\", \"Group 4\") is mentioned near the card name, use that number for the `group` parameter.\n    * Otherwise, leave the `group` parameter as `None`.\n5.  **Selection:** Select the single, most appropriate `card_id` from the tool's results based on the parameters used.\n\n### 4. 🖨️ Required Output Format\n\nThe final output **MUST be a single, strict JSON object**. **NO** introductory text, commentary, or explanation is permitted.\n\nJson Schema:\n{\n   \"type\":\"object\",\n   \"properties\":{\n      \"cards\":{\n         \"type\":\"array\",\n         \"items\":{\n            \"type\":\"object\",\n            \"properties\":{\n               \"card_id\":{\n                  \"type\":\"integer\"\n               },\n               \"card_name\":{\n                  \"type\":\"string\"\n               },\n               \"quantity\":{\n                  \"type\":\"integer\"\n               }\n            },\n            \"required\":[\n               \"card_id\",\n               \"quantity\"\n            ],\n            \"additionalProperties\":false\n         }\n      }\n   },\n   \"required\":[\n      \"cards\"\n   ],\n   \"additionalProperties\":false\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        448,
+        0
+      ],
+      "id": "58df023e-f9f8-4289-87c4-d1c445134163",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-nano",
+          "mode": "list",
+          "cachedResultName": "gpt-5-nano"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        432
+      ],
+      "id": "8d931b92-6de7-4270-ae1b-af3329f07e67",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "fLsk4eYCFNxmTzGF",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n   \"type\":\"object\",\n   \"properties\":{\n      \"cards\":{\n         \"type\":\"array\",\n         \"items\":{\n            \"type\":\"object\",\n            \"properties\":{\n               \"card_id\":{\n                  \"type\":\"integer\"\n               },\n               \"card_name\":{\n                  \"type\":\"string\"\n               },\n               \"quantity\":{\n                  \"type\":\"integer\"\n               }\n            },\n            \"required\":[\n               \"card_id\",\n               \"quantity\"\n            ],\n            \"additionalProperties\":false\n         }\n      }\n   },\n   \"required\":[\n      \"cards\"\n   ],\n   \"additionalProperties\":false\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        656,
+        224
+      ],
+      "id": "b1153251-b22e-4b35-9d25-e4049cc877ad",
+      "name": "Structured Output Parser"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Find Card by Name": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "77cd00cf-5f94-4184-840d-72fcb9250f7c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "431473cc52e92c87843dd3b27b224fd53e56fad3afead2e8ff6b1228ffa06838"
+  },
+  "id": "tT4nMjt9fy11ozjX",
+  "tags": []
+}

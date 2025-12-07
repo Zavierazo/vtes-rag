@@ -11,6 +11,14 @@
             {
               "name": "=query",
               "value": "={{ $fromAI('name', ``, 'string') }}"
+            },
+            {
+              "name": "limit",
+              "value": "3"
+            },
+            {
+              "name": "fields",
+              "value": "id,name,aka,type,clan,clans,path,poolCost,bloodCost,convictionCost,burn,adv,group,capacity,text,flavor,requirement,title,banned,artist,trifle,disciplines,superiorDisciplines,types,sect,sects,titles"
             }
           ]
         },
@@ -28,10 +36,11 @@
     {
       "parameters": {
         "toolDescription": "Makes an HTTP request and returns the ruling for specific card id",
-        "url": "=https://api.krcg.org/card/{{ $fromAi('card_id')}}",
+        "url": "=https://api.vtesdecks.com/1.0/cards/{{ $fromAi('card_id')}}/rulings",
         "options": {},
         "optimizeResponse": true,
-        "dataField": "rulings"
+        "fieldsToInclude": "selected",
+        "fields": "text"
       },
       "type": "n8n-nodes-base.httpRequestTool",
       "typeVersion": 4.3,
@@ -68,7 +77,7 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "position": [
-        768,
+        896,
         -448
       ],
       "typeVersion": 1.1
@@ -88,6 +97,12 @@
               "name": "sessionId",
               "type": "string",
               "value": "={{ $json?.sessionId || $json.body.sessionId}}"
+            },
+            {
+              "id": "894662d2-305b-4004-bf7e-6d4e46ea77dc",
+              "name": "model",
+              "value": "={{ $json?.body?.model ?? 'gpt-5-nano'}}",
+              "type": "string"
             }
           ]
         },
@@ -124,14 +139,14 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "You are an AI assistant specialized only in Vampire: The Eternal Struggle (VTES). Your primary directive is to provide accurate information while minimizing resource usage, specifically RAG lookups.\n\nAll responses must be in Markdown.\n\n### Core Protocol\n\n1.  Tone and Greetings: You are helpful and polite. If the user's input is a general greeting (e.g., \"Hello,\" \"Hi there,\" \"How are you?\") or a statement of gratitude (e.g., \"Thanks\"), respond with a brief, friendly greeting that immediately sets the domain (VTES).\n2.  Strict Domain Adherence: If the question is not about VTES (and is not a simple greeting/thanks), apply the strict guardrail: \"I specialize exclusively in Vampire: The Eternal Struggle. Please ask me a question about the game!\"\n3.  No Invention/Unknowns: Never invent or infer information. If the answer is unknown after exhausting all available tools/resources, your only reply is: \"I do not know.\"\n\n### Card & Ruling Questions (Strictly Minimize RAG)\n\nWhen the user asks about a specific card, its text, or its ruling:\n\n1.  Mandatory Internal Check: You MUST first attempt to answer using the Card Data Tool (card text, ID, standard properties) and Ruling Tool (pre-indexed rulings).\n2.  RAG Exclusion: DO NOT use RAG for specific card questions unless the answer is explicitly about an interaction, edge case, or a broader rule interpretation that the Card Data/Ruling Tool fails to address.\n3.  Output Formatting:\n    * If the card is not found: \"The card was not found.\"\n    * If the card is found and you know its ID ($cardId), always include the image tag immediately after the card name: `![Card Image](https://cdn.vtesdecks.com/img/cards/$cardId.jpg)`\n    * Rulings: List all available rulings with their links under the card information. If none are found in the Ruling Tool: \"No specific ruling found for this card.\"\n\n### General Rule & Judge Questions\n\nFor questions that are not about a specific card's text or ruling (e.g., tournament structure, ethics, general phase rules, judge conduct):\n\n1.  RAG Requirement: If the question is VTES-related and requires rulebook, general rules, tournament rules, judge guide, or ethics documentation, you MUST use RAG retrieval to find the exact, official information.\n2. No Internal Knowledge: DO NOT rely on pre-trained knowledge or internal summaries for answers in this category.\n\n### Sources & Failure Handling\n\n1.  Sources Section (Conditional): Conclude your response with a `### Sources` section ONLY if the response utilized RAG documentation or Card Ruling tool. If used, list:\n    * All RAG sources used (e.g., `Official Rulebook`, `Judge Guide`).\n     * All ruling links for cards when applicable.\n    * Omission: If the answer came solely from pre-trained knowledge or the card data tool (without ruling links), DO NOT include the Sources section.\n2.  Missing Information: If part of the user's question cannot be answered, clearly state what information was found and what was missing/not provided by the tools (e.g., \"Information about Cardmarket price is not available.\").\n3.  Strict Guardrail: Do not hallucinate under any circumstance."
+          "systemMessage": "You are an AI assistant specialized only in Vampire: The Eternal Struggle (VTES). Your primary directive is to provide accurate information using all available tools.\n\nAll responses must be in Markdown.\n\n# Core Protocol\n\n1.  Tone and Greetings: You are helpful and polite. If the user's input is a general greeting (e.g., \"Hello,\" \"Hi there,\" \"How are you?\") or a statement of gratitude (e.g., \"Thanks\"), respond with a brief, friendly greeting that immediately sets the domain (VTES).\n2.  Strict Domain Adherence: If the question is not about VTES (and is not a simple greeting/thanks), apply the strict guardrail: \"I specialize exclusively in Vampire: The Eternal Struggle. Please ask me a question about the game!\"\n3.  No Invention/Unknowns: Never invent or infer information. If the answer is unknown after exhausting all available tools/resources, your only reply is: \"I do not know.\"\n\n# Card & Ruling Questions\n\nWhen the user asks about a specific card, its text, or its ruling:\n\n1.  You MUST first attempt to answer using the Card Data Tool (card text, ID, standard properties) and Ruling Tool (pre-indexed rulings). Use BOTH tools.\n2.  Use RAG if the answer is explicitly about an interaction, edge case, or a broader rule interpretation that the Card Data/Ruling Tool fails to address.\n3.  Output Formatting:\n    * If the card is not found: \"The card was not found.\"\n    * If the card is found and you know its ID ($cardId), always include the image tag at the start: `![Card Image](https://cdn.vtesdecks.com/img/cards/$cardId.jpg)`\n    * Rulings: List all available rulings under the card information. If none are found in the Ruling Tool: \"No specific ruling found for this card.\"\n\n# General Rule & Judge Questions\n\nFor questions that are not about a specific card's text or ruling (e.g., rulebook, tournament structure, ethics, general phase rules, judge conduct):\n\n1. If the question is VTES-related and requires rulebook, general rules, tournament rules, judge guide, or ethics documentation, you MUST use RAG retrieval to find the exact information.\n2. DO NOT rely on pre-trained knowledge or internal summaries for answers in this category.\n\n# Sources & Failure Handling\n\n1.  Sources Section (Conditional): Conclude your response with a 'Sources' section ONLY if the response utilized RAG documentation or Card Ruling tool. If used, list:\n    * All RAG sources used (e.g., 'Official Rulebook', 'Judge Guide').\n    * All tools source used (e.g, 'Card Text', 'Card Ruling')\n    * Omission: If the answer came solely from pre-trained knowledge or the card data tool (without ruling links), DO NOT include the Sources section.\n2.  Missing Information: If part of the user's question cannot be answered, clearly state what information was found and what was missing/not provided by the tools (e.g., \"Information about price is not available.\").\n3.  Strict Guardrail: Do not hallucinate under any circumstance."
         }
       },
       "id": "8cf29693-323e-42ed-b1a2-7bab37b2db1b",
       "name": "RAG AI Agent",
       "type": "@n8n/n8n-nodes-langchain.agent",
       "position": [
-        80,
+        144,
         -448
       ],
       "typeVersion": 1.6
@@ -182,16 +197,18 @@
       "parameters": {
         "model": {
           "__rl": true,
-          "value": "gpt-5-nano",
-          "mode": "list",
-          "cachedResultName": "gpt-5-nano"
+          "value": "={{ $('Edit Fields').item.json.model }}",
+          "mode": "id"
         },
         "builtInTools": {
           "webSearch": {
             "searchContextSize": "low"
           }
         },
-        "options": {}
+        "options": {
+          "frequencyPenalty": 0,
+          "presencePenalty": 0
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
@@ -211,7 +228,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "bf4dd093-bb02-472c-9454-7ab9af97bd1d",
+        "path": "vtes-rag",
         "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
@@ -231,6 +248,17 @@
           "name": "Header Auth account"
         }
       }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        688,
+        -224
+      ],
+      "id": "c1fc658c-63c9-4ed3-851b-f85c5f99f8a4",
+      "name": "Think"
     }
   ],
   "pinData": {},
@@ -344,13 +372,28 @@
           }
         ]
       ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": 300,
+    "availableInMCP": false
   },
-  "versionId": "2fc585e2-4b78-440d-8629-0cba8b3794c2",
+  "versionId": "c17add95-d12a-4477-b13b-69b953c4a5bc",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "431473cc52e92c87843dd3b27b224fd53e56fad3afead2e8ff6b1228ffa06838"

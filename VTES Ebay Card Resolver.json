@@ -146,8 +146,8 @@
       "name": "OpenAI Chat Model",
       "credentials": {
         "openAiApi": {
-          "id": "fLsk4eYCFNxmTzGF",
-          "name": "OpenAi account"
+          "id": "VRXjzoFfcx2kKwXc",
+          "name": "OpenAi VTES Ebay Scrapper"
         }
       }
     },
@@ -256,7 +256,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "77cd00cf-5f94-4184-840d-72fcb9250f7c",
+  "versionId": "d127e6d0-fa2e-4370-b6ab-bfffaade4505",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "431473cc52e92c87843dd3b27b224fd53e56fad3afead2e8ff6b1228ffa06838"

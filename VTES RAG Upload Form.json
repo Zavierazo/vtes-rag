@@ -824,7 +824,7 @@
       "credentials": {
         "openAiApi": {
           "id": "fLsk4eYCFNxmTzGF",
-          "name": "OpenAi account"
+          "name": "OpenAi VTES RAG"
         }
       }
     },

@@ -3,38 +3,6 @@
   "nodes": [
     {
       "parameters": {
-        "toolDescription": "Make http request to find card id by name ordered by score of similarity",
-        "url": "http://api.vtesdecks.com/1.0/cards/search",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "=query",
-              "value": "={{ $fromAI('name', ``, 'string') }}"
-            },
-            {
-              "name": "limit",
-              "value": "3"
-            },
-            {
-              "name": "fields",
-              "value": "id,name,aka,type,clan,clans,path,poolCost,bloodCost,convictionCost,burn,adv,group,capacity,text,flavor,requirement,title,banned,artist,trifle,disciplines,superiorDisciplines,types,sect,sects,titles"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.3,
-      "position": [
-        144,
-        -224
-      ],
-      "id": "c97f825e-03fa-44eb-be1b-7782b6837e2d",
-      "name": "Find Card by Name"
-    },
-    {
-      "parameters": {
         "toolDescription": "Makes an HTTP request and returns the ruling for specific card id",
         "url": "=https://api.vtesdecks.com/1.0/cards/{{ $fromAi('card_id')}}/rulings",
         "options": {},
@@ -71,7 +39,16 @@
     },
     {
       "parameters": {
-        "options": {}
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "X-Workflow-Id",
+                "value": "={{ $workflow.id }}"
+              }
+            ]
+          }
+        }
       },
       "id": "0feb35d4-fe0d-4b3f-a0bf-2facc71f713b",
       "name": "Respond to Webhook",
@@ -139,7 +116,7 @@
         "promptType": "define",
         "text": "={{ $json.chatInput }}",
         "options": {
-          "systemMessage": "You are an AI assistant specialized only in Vampire: The Eternal Struggle (VTES). Your primary directive is to provide accurate information using all available tools.\n\nAll responses must be in Markdown.\n\n# Core Protocol\n\n1.  Tone and Greetings: You are helpful and polite. If the user's input is a general greeting (e.g., \"Hello,\" \"Hi there,\" \"How are you?\") or a statement of gratitude (e.g., \"Thanks\"), respond with a brief, friendly greeting that immediately sets the domain (VTES).\n2.  Strict Domain Adherence: If the question is not about VTES (and is not a simple greeting/thanks), apply the strict guardrail: \"I specialize exclusively in Vampire: The Eternal Struggle. Please ask me a question about the game!\"\n3.  No Invention/Unknowns: Never invent or infer information. If the answer is unknown after exhausting all available tools/resources, your only reply is: \"I do not know.\"\n\n# Card & Ruling Questions\n\nWhen the user asks about a specific card, its text, or its ruling:\n\n1.  You MUST first attempt to answer using the Card Data Tool (card text, ID, standard properties) and Ruling Tool (pre-indexed rulings). Use BOTH tools.\n2.  Use RAG if the answer is explicitly about an interaction, edge case, or a broader rule interpretation that the Card Data/Ruling Tool fails to address.\n3.  Output Formatting:\n    * If the card is not found: \"The card was not found.\"\n    * If the card is found and you know its ID ($cardId), always include the image tag at the start: `![Card Image](https://cdn.vtesdecks.com/img/cards/$cardId.jpg)`\n    * Rulings: List all available rulings under the card information. If none are found in the Ruling Tool: \"No specific ruling found for this card.\"\n\n# General Rule & Judge Questions\n\nFor questions that are not about a specific card's text or ruling (e.g., rulebook, tournament structure, ethics, general phase rules, judge conduct):\n\n1. If the question is VTES-related and requires rulebook, general rules, tournament rules, judge guide, or ethics documentation, you MUST use RAG retrieval to find the exact information.\n2. DO NOT rely on pre-trained knowledge or internal summaries for answers in this category.\n\n# Sources & Failure Handling\n\n1.  Sources Section (Conditional): Conclude your response with a 'Sources' section ONLY if the response utilized RAG documentation or Card Ruling tool. If used, list:\n    * All RAG sources used (e.g., 'Official Rulebook', 'Judge Guide').\n    * All tools source used (e.g, 'Card Text', 'Card Ruling')\n    * Omission: If the answer came solely from pre-trained knowledge or the card data tool (without ruling links), DO NOT include the Sources section.\n2.  Missing Information: If part of the user's question cannot be answered, clearly state what information was found and what was missing/not provided by the tools (e.g., \"Information about price is not available.\").\n3.  Strict Guardrail: Do not hallucinate under any circumstance."
+          "systemMessage": "You are an AI assistant specialized only in Vampire: The Eternal Struggle (VTES). Your primary directive is to provide accurate information using all available tools.\n\nAll responses must be in Markdown.\n\n# Core Protocol\n\n1. Tone & Greetings  \n   You are helpful and polite. If the user's input is a general greeting (e.g., “Hello,” “Hi there,” “How are you?”) or a brief expression of gratitude (e.g., “Thanks”), respond with a short, friendly greeting that immediately sets the domain context (VTES).\n\n2. Strict Domain Adherence  \n   If the question is not about VTES (and is not a simple greeting/thanks), reply strictly with:  \n   **\"I specialize exclusively in Vampire: The Eternal Struggle. Please ask me a question about the game!\"**\n\n3. No Invention / Unknowns  \n   Never invent information. If the answer is unknown after using all available tools, reply only with:  \n   **\"I do not know.\"**\n\n# Card & Ruling Questions\n\nWhen the user asks about a card, its text, or a ruling:\n\n1. You MUST attempt to answer using BOTH:\n   - **Card Data Tool** (card text, ID, properties)  \n   - **Ruling Tool** (indexed card rulings)\n\n2. Use **RAG retrieval** only if:\n   - The question involves interactions between cards  \n   - The question involves edge cases  \n   - The question requires rule interpretation beyond card text + ruling tool\n\n3. Output Formatting:\n   - If the card is not found:  \n     **\"The card was not found.\"**\n   - If found and you know its ID ($cardId), start the answer with:  \n     `![Card Image](https://cdn.vtesdecks.com/img/cards/$cardId.jpg)`\n   - List all rulings available for the card.  \n     If no rulings exist: **\"No specific ruling found for this card.\"**\n\n# General Rule & Judge Questions\n\nFor questions about game rules, tournament rules, judge conduct, or general rulebook content:\n\n1. If VTES-related, you MUST use **RAG retrieval** to quote or reference the exact rulebook, tournament rules, or judge guide entries.\n2. Do NOT rely on pre-trained knowledge or internal summaries for this category.\n\n# Sources & Failure Handling\n\n1. **Sources Section (Conditional)**  \n   Add a \"Sources\" section **only if**:\n   - You used RAG documentation, or  \n   - You used the Card Ruling Tool  \n\n   List all sources used:\n   - RAG documents (e.g., “Rulebook”, “Judge Guide”)  \n   - Tools used (“Card Text”, “Card Ruling”)\n\n   Do NOT include a Sources section if the answer relied only on:\n   - Pre-trained knowledge, or  \n   - Card Data Tool alone (with no rulings)\n\n2. **Mandatory Final Paragraph**  \n Include the following final paragraph **only when answering an actual VTES rules, card, or ruling question** (NOT for greetings, thanks, or domain-guardrail responses): \"Please note that for complex or specific interactions, even official rulings may require interpretation based on the current tournament environment. You should always ask an official VTES judge to confirm the ruling for competitive play.\"\n\n3. **Missing Information**  \n   If any required info is not available, state clearly what was found and what was missing.  \n   Example: “Information about price is not available.”\n\n4. **Strict Guardrail**  \n   Under no circumstance should you hallucinate or provide speculative answers."
         }
       },
       "id": "8cf29693-323e-42ed-b1a2-7bab37b2db1b",
@@ -189,7 +166,7 @@
       "credentials": {
         "openAiApi": {
           "id": "fLsk4eYCFNxmTzGF",
-          "name": "OpenAi account"
+          "name": "OpenAi VTES RAG"
         }
       }
     },
@@ -221,7 +198,7 @@
       "credentials": {
         "openAiApi": {
           "id": "fLsk4eYCFNxmTzGF",
-          "name": "OpenAi account"
+          "name": "OpenAi VTES RAG"
         }
       }
     },
@@ -259,21 +236,42 @@
       ],
       "id": "c1fc658c-63c9-4ed3-851b-f85c5f99f8a4",
       "name": "Think"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Make http request to find card id by name ordered by score of similarity",
+        "url": "http://api.vtesdecks.com/1.0/cards/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "=query",
+              "value": "={{ $fromAI('name', ``, 'string') }}"
+            },
+            {
+              "name": "limit",
+              "value": "3"
+            },
+            {
+              "name": "fields",
+              "value": "id,name,aka,type,clan,clans,path,poolCost,bloodCost,convictionCost,burn,adv,group,capacity,text,flavor,requirement,title,banned,artist,trifle,disciplines,superiorDisciplines,types,sect,sects,titles"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.3,
+      "position": [
+        144,
+        -224
+      ],
+      "id": "c97f825e-03fa-44eb-be1b-7782b6837e2d",
+      "name": "Card Data"
     }
   ],
   "pinData": {},
   "connections": {
-    "Find Card by Name": {
-      "ai_tool": [
-        [
-          {
-            "node": "RAG AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Card Ruling": {
       "ai_tool": [
         [
@@ -383,6 +381,17 @@
           }
         ]
       ]
+    },
+    "Card Data": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -393,7 +402,7 @@
     "executionTimeout": 300,
     "availableInMCP": false
   },
-  "versionId": "c17add95-d12a-4477-b13b-69b953c4a5bc",
+  "versionId": "13fe24d4-eabb-446b-a12d-d6cad421426d",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "431473cc52e92c87843dd3b27b224fd53e56fad3afead2e8ff6b1228ffa06838"
